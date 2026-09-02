@@ -1,0 +1,42 @@
+
+Competition brand-buzzword-hackathon image
+Brand & Buzzword Hackathon
+You have 10 submissions remaining today. This resets in 3 hours.
+
+claude
+Connect to
+Configuration
+{
+    "mcpServers": {
+        "kaggle": {
+            "command": "npx",
+            "args": [
+                "mcp-remote",
+                "https://www.kaggle.com/mcp"
+            ]
+        }
+    }
+}
+Authentication
+# Call the MCP server's `authorize` tool.
+            
+# Or, for token authentication:
+{
+    "mcpServers": {
+        "kaggle": {
+            "command": "npx",
+            "args": [
+                "mcp-remote",
+                "https://www.kaggle.com/mcp",
+                "--header",
+                "Authorization: Bearer <YOUR_TOKEN>"
+            ]
+        }
+    }
+}
+
+# If you don't already have a token, go to Settings > Generate New Token > Copy.
+Usage
+# To upload a submission, prompt your client to use the
+# "mcp_kaggle_start_competition_submission_upload" tool. 
+# Then, use "kaggle_mcp_submit_to_competition" to submit it to the competition.
