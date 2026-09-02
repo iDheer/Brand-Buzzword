@@ -157,8 +157,15 @@ class HangmanTransformer(nn.Module):
         batch, seq = board.shape
 
         positions = torch.arange(seq, device=board.device).unsqueeze(0).expand(batch, seq)
-        lengths = (~feats["is_pad"]).sum(dim=1, keepdim=True)
-        reverse = (lengths - 1 - positions).clamp(min=0, max=MAX_WORD_LEN)
+        # Distance from the end must be measured against the *extent* of the
+        # word, not the count of non-pad tokens. Those differ exactly when the
+        # word contains an interior non-letter (a space or digit in a brand
+        # name, encoded as PAD): counting tokens would shift every preceding
+        # slot's suffix distance by the number of such characters, corrupting
+        # the strongest morphological signal the encoder has. The corpora are
+        # pure a-z, where the two agree, so this is behaviour-preserving there.
+        extent = (positions * (~feats["is_pad"])).max(dim=1, keepdim=True).values + 1
+        reverse = (extent - 1 - positions).clamp(min=0, max=MAX_WORD_LEN)
 
         x = (
             self.token_embedding(board)

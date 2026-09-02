@@ -180,6 +180,7 @@ class Trainer:
 
         bootstrap = PositionalNGramPolicy(self.train_words, self.device)
         aggregated: StateBuffer | None = None
+        self._length_weights: np.ndarray | None = None
 
         for round_idx in range(cfg.n_rounds):
             t0 = time.time()
@@ -194,7 +195,22 @@ class Trainer:
                 label = "self-play"
 
             sample_n = min(cfg.words_per_round, len(self.train_words))
-            sample_idx = self.rng.choice(len(self.train_words), size=sample_n, replace=False)
+            if cfg.short_boost == 1.0:
+                sample_idx = self.rng.choice(
+                    len(self.train_words), size=sample_n, replace=False
+                )
+            else:
+                # Importance-sample the lengths that actually decide the score.
+                if self._length_weights is None:
+                    lengths = np.array([len(w) for w in self.train_words])
+                    weights = np.where(
+                        (lengths >= 4) & (lengths <= 9), cfg.short_boost, 1.0
+                    )
+                    self._length_weights = weights / weights.sum()
+                sample_idx = self.rng.choice(
+                    len(self.train_words), size=sample_n,
+                    replace=True, p=self._length_weights,
+                )
             sample_idx.sort()
             sample_words = [self.train_words[i] for i in sample_idx]
 

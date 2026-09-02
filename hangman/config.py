@@ -109,6 +109,13 @@ class TrainConfig:
     explore_eps: float = 0.15
     #: Fraction of the buffer retained from previous rounds (DAgger aggregation).
     replay_fraction: float = 0.35
+    #: Sampling weight applied to words of length 4-9 when building each round's
+    #: self-play corpus. Those lengths carry ~84% of all losses (long words are
+    #: already solved 95%+ of the time), so a uniform sample spends most of its
+    #: budget on states whose outcome is not in doubt. 1.0 reproduces uniform
+    #: sampling exactly; >1 concentrates the round on the region that decides
+    #: the win rate. Sampling switches to with-replacement when this is not 1.0.
+    short_boost: float = 1.0
 
     # --- inference --------------------------------------------------------
     #: Games advanced in lockstep per forward pass. Keep this modest: an

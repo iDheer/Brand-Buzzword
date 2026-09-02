@@ -40,6 +40,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dropout", type=float, default=0.1)
     p.add_argument("--explore-eps", type=float, default=0.15)
     p.add_argument("--replay-fraction", type=float, default=0.35)
+    p.add_argument("--short-boost", type=float, default=1.0,
+                   help="sampling weight for words of length 4-9, which carry "
+                        "~84%% of losses. 1.0 = uniform (unchanged).")
     p.add_argument("--n-val", type=int, default=12_000)
     p.add_argument("--train-file", default="train.txt")
     return p.parse_args()
@@ -71,6 +74,7 @@ def main() -> None:
             epochs_per_round=args.epochs_per_round,
             explore_eps=args.explore_eps,
             replay_fraction=args.replay_fraction,
+            short_boost=args.short_boost,
         ),
     )
 
