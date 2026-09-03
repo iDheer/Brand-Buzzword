@@ -55,7 +55,7 @@ class PositionalNGramPolicy:
 
     Scores a letter by how often it completes the observed pattern, using
     length-bucketed positional character statistics plus the set of letters
-    already ruled out. Purely statistical -- included to measure the headroom
+    already ruled out. Purely statistical, included to measure the headroom
     the neural model has to beat.
     """
 
@@ -86,7 +86,7 @@ class PositionalNGramPolicy:
 
 
 class UniformRandomPolicy:
-    """Pure noise -- the absolute floor, used in unit tests."""
+    """Pure noise, the absolute floor, used in unit tests."""
 
     def __call__(self, board: torch.Tensor, guessed: torch.Tensor) -> torch.Tensor:
         return torch.rand((board.shape[0], N_LETTERS), device=board.device)

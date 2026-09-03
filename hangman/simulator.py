@@ -2,10 +2,10 @@
 
 A single implementation of the rules drives three different jobs:
 
-* **state generation** -- every decision point encountered during simulated
+* **state generation**: every decision point encountered during simulated
   play becomes a supervised training example (DAgger);
-* **evaluation** -- win rate / efficiency on held-out words;
-* **submission** -- the chronological guess string required by the CSV schema.
+* **evaluation**: win rate / efficiency on held-out words;
+* **submission**: the chronological guess string required by the CSV schema.
 
 Using one engine for all three removes any chance of train/serve skew.
 
@@ -47,7 +47,7 @@ class StateBuffer:
 
     ``board`` is the literal encoder input; ``guessed`` and ``contains`` are
     26-bit masks from which the training target is derived on the fly as
-    ``contains & ~guessed`` -- the letters that are still hidden and still
+    ``contains & ~guessed``, the letters that are still hidden and still
     legal to guess.
     """
 
@@ -94,7 +94,7 @@ class PlayResult:
     """Outcome of one batch of games."""
 
     won: np.ndarray            # (n_games,) bool
-    wrong: np.ndarray          # (n_games,) int32 -- wrong guesses at termination
+    wrong: np.ndarray          # (n_games,) int32, wrong guesses at termination
     guess_strings: list[str]   # chronological guesses, ready for the CSV
     states: StateBuffer | None
 

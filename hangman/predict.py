@@ -4,7 +4,7 @@ The competition wants a *chronological* guess sequence per word rather than an
 interactive callback, so we play every test game locally with the trained
 policy and write down the letters in the order they were actually guessed.
 The exact same engine that produced the training states and the validation
-numbers produces the CSV -- there is no second, subtly different code path.
+numbers produces the CSV. There is no second, subtly different code path.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 import torch
 
 from .config import MAX_WRONG_GUESSES
-from .model import HangmanTransformer
+from .model import HangmanTransformer, autocast_dtype
 from .simulator import Policy, play_games, score_guess_strings
 
 
@@ -24,7 +24,7 @@ class EnsemblePolicy:
 
     Averaging in probability space (rather than logit space) keeps the
     combination well calibrated when the members disagree sharply, which is
-    exactly the regime -- late game, few candidates left -- where a bad guess
+    exactly the regime (late game, few candidates left) where a bad guess
     costs the game.
     """
 
@@ -32,7 +32,7 @@ class EnsemblePolicy:
         self,
         models: list[HangmanTransformer],
         weights: list[float] | None = None,
-        amp_dtype: torch.dtype | None = torch.bfloat16,
+        amp_dtype: torch.dtype | str | None = "auto",
     ) -> None:
         if not models:
             raise ValueError("EnsemblePolicy needs at least one model")
@@ -42,7 +42,7 @@ class EnsemblePolicy:
         raw = weights if weights is not None else [1.0] * len(models)
         total = float(sum(raw))
         self.weights = [w / total for w in raw]
-        self.amp_dtype = amp_dtype
+        self.amp_dtype = autocast_dtype() if amp_dtype == "auto" else amp_dtype
 
     @torch.no_grad()
     def __call__(self, board: torch.Tensor, guessed: torch.Tensor) -> torch.Tensor:
@@ -76,7 +76,7 @@ def build_guess_strings(
 
     ``play_max_wrong`` controls only how far the *recorded sequence* runs. The
     rules state that characters after the terminating guess "are locked out and
-    ignored", so a longer sequence cannot change a strictly-graded score -- the
+    ignored", so a longer sequence cannot change a strictly-graded score. The
     greedy policy is life-independent, so the first N guesses are identical
     either way and only trailing characters are added. It exists because the
     organisers' own reference loop is written ``while wrong_guesses <= 6``,

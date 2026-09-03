@@ -37,11 +37,30 @@ import torch.nn.functional as F
 from .config import MASK_TOKEN, MAX_WORD_LEN, N_LETTERS, PAD_TOKEN, VOCAB_SIZE, ModelConfig
 
 
+def autocast_dtype() -> torch.dtype:
+    """Pick the half precision the current GPU can actually run fast.
+
+    bfloat16 is the better choice numerically and is what these models were
+    trained under, but the hardware support arrived with Ampere. Kaggle hands
+    out T4 (Turing) and P100 (Pascal), where torch accepts a bfloat16 autocast
+    and then falls back to a slow path instead of refusing. The failure is a
+    three-to-five times slowdown with no error message, which is exactly the
+    kind of thing you only notice when the run is already over budget.
+
+    float16 is well supported everywhere back to Pascal. The network is small,
+    inference-only here, and the fused logits are consumed by an argmax, so the
+    narrower exponent range costs nothing measurable.
+    """
+    if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+        return torch.bfloat16
+    return torch.float16
+
+
 class GameStateFeatures(nn.Module):
     """Derives every auxiliary feature from ``(board, guessed)`` alone.
 
     Keeping this inside the model guarantees that training and inference see
-    byte-identical inputs -- there is no separate feature pipeline to drift.
+    byte-identical inputs. There is no separate feature pipeline to drift.
     """
 
     n_context_features = 2 * N_LETTERS + 6
@@ -224,9 +243,16 @@ class HangmanTransformer(nn.Module):
     # ------------------------------------------------------------------ #
 
     @torch.no_grad()
-    def as_policy(self, amp_dtype: torch.dtype | None = torch.bfloat16):
-        """Return a ``Policy`` callable for :func:`hangman.simulator.play_games`."""
+    def as_policy(self, amp_dtype: torch.dtype | str | None = "auto"):
+        """Return a ``Policy`` callable for :func:`hangman.simulator.play_games`.
+
+        ``amp_dtype`` is ``"auto"`` by default, meaning whichever half
+        precision this GPU supports natively. Pass an explicit dtype to force
+        one, or ``None`` to disable autocast and run in full precision.
+        """
         self.eval()
+        if amp_dtype == "auto":
+            amp_dtype = autocast_dtype()
 
         def policy(board: torch.Tensor, guessed: torch.Tensor) -> torch.Tensor:
             if amp_dtype is not None and board.is_cuda:
@@ -251,10 +277,10 @@ def hangman_loss(
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Multi-task objective.
 
-    ``fused``     -- the loss that actually matters: presence BCE on the fused
+    ``fused``     the loss that actually matters: presence BCE on the fused
                      logits, evaluated only over letters still legal to guess.
-    ``set``       -- same BCE on the raw set head, keeping it independently useful.
-    ``position``  -- cross-entropy on the true letter of every hidden slot,
+    ``set``       same BCE on the raw set head, keeping it independently useful.
+    ``position``  cross-entropy on the true letter of every hidden slot,
                      which forces the encoder to learn spelling structure rather
                      than only bag-of-letters statistics.
     """

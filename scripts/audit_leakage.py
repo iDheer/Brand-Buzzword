@@ -4,7 +4,7 @@ Answers one question with evidence rather than assertion: could any part of
 this submission have seen the answers it is being scored on?
 
 The decisive checks are behavioural. A model that leaked the test words would
-play near-perfectly -- it would rarely miss, would almost never lose, and its
+play near-perfectly. It would rarely miss, would almost never lose, and its
 first guess would be correct essentially always. A model that genuinely infers
 letters from spelling structure misses constantly. We measure that.
 """
@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from hangman.config import MAX_WRONG_GUESSES
+from hangman.config import LETTER_TO_ID, MAX_WRONG_GUESSES
 from hangman.data import load_words, split_train_val
 from hangman.simulator import score_guess_strings
 
@@ -50,7 +50,7 @@ def main() -> None:
           len(fitted) + len(held_out) == len(train_words)
           and set(fitted) | set(held_out) == train_set)
 
-    print("\n2. SOURCE AUDIT -- is test.txt referenced anywhere in the training path?")
+    print("\n2. SOURCE AUDIT: is test.txt referenced anywhere in the training path?")
     training_modules = ["config", "data", "simulator", "baselines", "model",
                         "dataset", "retrieval", "train"]
     offenders = []
@@ -66,7 +66,7 @@ def main() -> None:
     check("inference module never fits anything",
           not re.search(r"\.backward\(|optimizer|\.train\(\)|Trainer", predict_text))
 
-    print("\n3. BEHAVIOURAL PROOF -- does the submission actually play the game?")
+    print("\n3. BEHAVIOURAL PROOF: does the submission actually play the game?")
     submission = ROOT / "submission.csv"
     if not submission.exists():
         print("  submission.csv missing; skipping")
@@ -104,19 +104,28 @@ def main() -> None:
           win_rate < 95.0, f"{100 - win_rate:.1f}% of words unsolved")
 
     print("\n4. STRATEGY IS WORD-INDEPENDENT AT THE START")
-    # Without leakage the opening guess can only depend on word length, so a
+    # Before any guess the only observation is the opening board: the mask
+    # pattern plus any non-letters, which are revealed from the start. So a
     # handful of distinct openings must cover the entire test set.
+    #
+    # Keyed on the board rather than the length. The two coincide on a pure
+    # a-z corpus like test.txt, but not on a brand-name set: 'coca cola' and
+    # 'aaaaaaaaa' share a length while presenting '____ ____' and '_________',
+    # which are different observations and may legitimately differ.
+    def opening_board(word: str) -> str:
+        return "".join("_" if c in LETTER_TO_ID else c for c in word)
+
     openers = Counter(g[0] for g in guesses if g)
-    by_length: dict[int, Counter] = {}
+    by_board: dict[str, Counter] = {}
     for word, g in zip(test_words, guesses):
         if g:
-            by_length.setdefault(len(word), Counter())[g[0]] += 1
-    ambiguous = [ln for ln, c in by_length.items() if len(c) > 1]
+            by_board.setdefault(opening_board(word), Counter())[g[0]] += 1
+    ambiguous = [b for b, c in by_board.items() if len(c) > 1]
     print(f"      distinct opening letters overall: {len(openers)}  {dict(openers.most_common(6))}")
-    check("one fixed opening letter per word length",
+    check("one fixed opening letter per opening board",
           not ambiguous,
-          f"lengths with more than one opener: {ambiguous}" if ambiguous else
-          f"{len(by_length)} lengths, each with a single opener")
+          f"boards with more than one opener: {ambiguous[:5]}" if ambiguous else
+          f"{len(by_board)} distinct boards, each with a single opener")
 
     print("\n5. RULE CONFORMANCE OF THE WRITTEN STRINGS")
     check("no repeated guess in any row",
@@ -150,7 +159,7 @@ def main() -> None:
     print(f"      trailing (ignored) characters: {tail:,} "
           f"= {tail / sum(map(len, guesses)) * 100:.1f}% of all characters")
 
-    print("\n" + ("AUDIT PASSED -- no evidence of leakage"
+    print("\n" + ("AUDIT PASSED: no evidence of leakage"
                   if not FAILURES else f"AUDIT FAILURES: {FAILURES}"))
     sys.exit(1 if FAILURES else 0)
 

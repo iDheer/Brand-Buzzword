@@ -6,7 +6,7 @@ The board plus the ruled-out letters define a hard constraint on what the word
 can be. Every training word of the same length either satisfies it or does not:
 
 * a revealed slot pins one specific letter;
-* a still-hidden slot can hold *any letter that has not been guessed* -- because
+* a still-hidden slot can hold *any letter that has not been guessed*, because
   a correct guess reveals all of its occurrences, so a hidden slot is never a
   guessed letter.
 
@@ -88,7 +88,7 @@ class LexiconRetriever:
 
         ``prior[b, c]`` is the expected number of hidden slots holding letter
         ``c`` among consistent training words, normalised by the candidate
-        count -- i.e. an estimate of ``P(c is still hidden in the answer)``.
+        count, i.e. an estimate of ``P(c is still hidden in the answer)``.
         ``n_candidates`` is returned so callers can tell a confident prior
         (thousands of candidates) from a vacuous one (none at all).
         """

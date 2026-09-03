@@ -7,7 +7,7 @@ subset of its letters, and ask the model to name a hidden one. That is easy and
 badly wrong: the states it produces are not the states a *playing* model
 encounters. Real boards are reached by a policy that guesses common letters
 first, and they always come with a set of letters that have been ruled out by
-failed guesses -- information random masking cannot express at all.
+failed guesses, information random masking cannot express at all.
 
 So instead we generate states by *playing*. Round 0 bootstraps with a
 statistical policy; every later round replays the corpus with the current
@@ -32,7 +32,7 @@ from .config import ExperimentConfig, ModelConfig
 from .data import encode_words
 from .dataset import GpuStateStore
 from .baselines import PositionalNGramPolicy
-from .model import HangmanTransformer, hangman_loss
+from .model import HangmanTransformer, autocast_dtype, hangman_loss
 from .simulator import Policy, StateBuffer, play_games
 
 
@@ -122,7 +122,9 @@ class Trainer:
             weight_decay=cfg.train.weight_decay,
             betas=(0.9, 0.98),
         )
-        self.amp_dtype = getattr(torch, cfg.train.amp_dtype)
+        # Honour the configured dtype only if the GPU supports it natively.
+        requested = getattr(torch, cfg.train.amp_dtype)
+        self.amp_dtype = requested if requested is not torch.bfloat16 else autocast_dtype()
         self.global_step = 0
         self.total_steps = 1  # refined once the first buffer size is known
         self.history: list[dict] = []

@@ -3,7 +3,7 @@
 The DAgger buffer holds a few million game states. They are small and fixed
 width, so instead of a ``DataLoader`` with host-to-device copies we keep the
 whole buffer on the GPU in compact dtypes and slice it by index. That removes
-the input pipeline as a bottleneck entirely -- batches cost a gather.
+the input pipeline as a bottleneck entirely: batches cost a gather.
 
 Memory for 3M states: board 3M x 29 uint8 (87 MB) + three int32 columns
 (36 MB) = well within an 8 GB card alongside the model.

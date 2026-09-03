@@ -22,8 +22,8 @@ def split_train_val(
     """Carve a held-out validation set out of the training corpus.
 
     The validation words are never used to fit the model, so the win rate we
-    measure on them is an honest estimate of performance on unseen vocabulary
-    -- which is exactly what the private leaderboard measures.
+    measure on them is an honest estimate of performance on unseen vocabulary,
+    which is exactly what the private leaderboard measures.
     """
     rng = np.random.default_rng(seed)
     order = rng.permutation(len(words))
@@ -39,12 +39,12 @@ def encode_words(words: list[str], max_len: int = MAX_WORD_LEN) -> np.ndarray:
     Positions past a word's length hold :data:`PAD_TOKEN`.
 
     **Non-letter characters also map to** :data:`PAD_TOKEN`. The rules state
-    that spaces, digits and punctuation "are shown to you from the start -- you
+    that spaces, digits and punctuation "are shown to you from the start; you
     only ever guess a-z", so such a slot is never hidden, never guessable, and
     must not block the win condition. Encoding it as padding gives exactly that
     behaviour: the engine never masks it, and the encoder ignores it. The
     provided corpora are pure a-z, but the hidden evaluation set is described as
-    brand names, which routinely contain spaces -- so this path must not crash.
+    brand names, which routinely contain spaces, so this path must not crash.
     """
     out = np.full((len(words), max_len), PAD_TOKEN, dtype=np.uint8)
     for row, word in enumerate(words):
